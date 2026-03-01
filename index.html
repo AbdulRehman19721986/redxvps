@@ -298,7 +298,7 @@
             <div class="row2" style="margin-top:16px">
               <div class="fg"><label>Bot Name</label><input id="c-BOT_NAME" placeholder="REDX BOT"/></div>
               <div class="fg"><label>Owner Name</label><input id="c-OWNER_NAME" placeholder="Abdul Rehman"/></div>
-              <div class="fg"><label>Owner Number</label><input id="c-OWNER_NUM" placeholder="923346690239"/></div>
+              <div class="fg"><label>Owner Number</label><input id="c-OWNER_NUM" placeholder="923009842133"/></div>
               <div class="fg"><label>Prefix</label><input id="c-PREFIX" placeholder="."/></div>
             </div>
           </div>
@@ -377,9 +377,10 @@
 
 <script>
   // -------------------- CONFIG --------------------
-  const API_BASE = 'https://your-backend.railway.app';  // 🔁 REPLACE WITH YOUR RAILWAY URL
+  const API_BASE = 'https://redxvpsbeckend-production.up.railway.app';  // 🔁 Your Railway backend
   const ADMIN_USER = 'redx';
   const ADMIN_PASS = 'redx';
+  const OWNER_NUMBER = '923009842133';  // Your WhatsApp number
 
   // -------------------- STATE --------------------
   let CU = null;               // current user
@@ -424,6 +425,7 @@
       try { return JSON.parse(txt); }
       catch { return { error: `Bad response (${r.status})`, raw: txt.slice(0,200) }; }
     } catch (e) {
+      console.error('Fetch error:', e);
       return { error: 'Network error: ' + e.message };
     }
   }
@@ -532,7 +534,7 @@
       AUTO_TYPING:       chk('c-AUTO_TYPING'),
       BOT_NAME:    v('c-BOT_NAME',  'REDX BOT'),
       OWNER_NAME:  v('c-OWNER_NAME','Abdul Rehman'),
-      OWNER_NUMBER:v('c-OWNER_NUM', '923346690239'),
+      OWNER_NUMBER:v('c-OWNER_NUM', OWNER_NUMBER),
       PREFIX:      v('c-PREFIX',    '.')
     };
 
@@ -691,15 +693,15 @@
       <thead><tr><th>GitHub</th><th>Status</th><th>Plan</th><th>Max Bots</th><th>Bots</th><th>Expiry</th><th>Actions</th></tr></thead>
       <tbody>
         ${d.users.map(u => `<tr>
-          <td><a href="https://github.com/${u.githubUsername}" target="_blank" style="color:var(--pl)">${u.githubUsername}</a></td>
-          <td>${u.isApproved ? '<span class="bdg bg">Approved</span>' : '<span class="bdg by">Pending</span>'}</td>
-          <td>${u.subscriptionPlan||'-'}</td>
-          <td>${u.maxBots||1}</td>
-          <td>${(u.deployedBots||[]).length}</td>
-          <td style="font-size:.8rem">${u.expiryDate ? new Date(u.expiryDate).toLocaleDateString() : '—'}</td>
+          <td><a href="https://github.com/${u.github_username}" target="_blank" style="color:var(--pl)">${u.github_username}</a></td>
+          <td>${u.is_approved ? '<span class="bdg bg">Approved</span>' : '<span class="bdg by">Pending</span>'}</td>
+          <td>${u.subscription_plan||'-'}</td>
+          <td>${u.max_bots||1}</td>
+          <td>0</td>
+          <td style="font-size:.8rem">${u.expiry_date ? new Date(u.expiry_date).toLocaleDateString() : '—'}</td>
           <td style="display:flex;gap:5px;flex-wrap:wrap">
             <button class="btn btn-out sm" onclick='alert("Edit user modal")'>Edit</button>
-            <button class="btn btn-red sm" onclick="aDeleteUser('${u.githubUsername}')">Del</button>
+            <button class="btn btn-red sm" onclick="aDeleteUser('${u.github_username}')">Del</button>
           </td>
         </tr>`).join('')}
       </tbody>
@@ -719,17 +721,17 @@
     el.innerHTML = d.plans?.length ? `<div class="cgrid">${d.plans.map(p => `
       <div class="card">
         <div><b>${p.name}</b> <span class="bdg bg">${p.price}</span></div>
-        <div style="margin-top:6px">${p.duration} · ${p.maxBots} bots</div>
+        <div style="margin-top:6px">${p.duration} · ${p.max_bots} bots</div>
         <div style="display:flex;gap:7px;margin-top:14px">
           <button class="btn btn-out sm" onclick='alert("Edit")'>Edit</button>
-          <button class="btn btn-red sm" onclick="aDeletePlan('${p._id}')">Delete</button>
+          <button class="btn btn-red sm" onclick="aDeletePlan('${p.id}')">Delete</button>
         </div>
       </div>`).join('')}</div>` : '<div style="color:var(--tx3)">No plans</div>';
   }
 
   async function aDeletePlan(id) {
     if (!confirm('Delete plan?')) return;
-    const d = await post('/admin/delete-plan', { password: AP, _id: id });
+    const d = await post('/admin/delete-plan', { password: AP, id });
     notif(d.success ? 'Deleted' : 'Error', d.success ? 'success' : 'error');
     if (d.success) aLoadPlans();
   }
@@ -740,7 +742,7 @@
     el.innerHTML = `<div class="cgrid">${(d.servers||[]).map(s => `
       <div class="card">
         <b>${s.name}</b>
-        <div style="font-size:2rem;font-weight:800;color:var(--pl);margin:10px 0">${s.count||0}</div>
+        <div style="font-size:2rem;font-weight:800;color:var(--pl);margin:10px 0">${s.bot_count||0}</div>
         <div>bots deployed</div>
         ${s.error ? `<div style="color:var(--red);font-size:.78rem">${s.error}</div>` : ''}
       </div>`).join('')}</div>`;
@@ -751,19 +753,20 @@
     const el = document.getElementById('at-bots');
     if (!d.apps?.length) { el.innerHTML = '<div style="color:var(--tx3)">No bots deployed.</div>'; return; }
     el.innerHTML = `<div class="tw2"><table>
-      <thead><tr><th>App</th><th>Server</th><th>Created</th><th>Action</th></tr></thead>
+      <thead><tr><th>App</th><th>User</th><th>Server</th><th>Created</th><th>Action</th></tr></thead>
       <tbody>${d.apps.map(a => `<tr>
-        <td style="font-family:'Fira Code'">${a.name}</td>
-        <td>${a.serverName}</td>
+        <td style="font-family:'Fira Code'">${a.app_name}</td>
+        <td>${a.github_username}</td>
+        <td>${a.server_name}</td>
         <td>${new Date(a.created_at).toLocaleDateString()}</td>
-        <td><button class="btn btn-red sm" onclick="aDeleteBot('${a.name}',${a.serverId})">Delete</button></td>
+        <td><button class="btn btn-red sm" onclick="aDeleteBot('${a.app_name}')">Delete</button></td>
       </tr>`).join('')}
       </tbody></table></div>`;
   }
 
-  async function aDeleteBot(name, serverId) {
+  async function aDeleteBot(name) {
     if (!confirm(`Delete ${name}?`)) return;
-    const d = await post('/delete-multiple-apps', { password: AP, apps: [{ name, serverId }] });
+    const d = await post('/delete-multiple-apps', { password: AP, apps: [{ name }] });
     notif(d.results?.success?.length ? 'Deleted' : 'Failed', d.results?.success?.length ? 'success' : 'error');
     aLoadBots();
   }
