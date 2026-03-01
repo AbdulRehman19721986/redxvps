@@ -61,6 +61,8 @@
     .btn-acc:hover{background:#0891b2}
     .btn-ylw{background:var(--ylw);color:#000}
     .btn-ylw:hover{background:#d97706}
+    .btn-info{background:var(--acc);color:#fff}
+    .btn-info:hover{background:#0891b2}
     .sm{padding:7px 14px;font-size:.82rem;border-radius:7px}
 
     .card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:24px}
@@ -363,29 +365,118 @@
       <div class="aside-item" style="color:var(--red)" onclick="logout()">🚪 Logout</div>
     </div>
     <div class="amain">
+      <!-- users -->
       <div id="at-users"><div style="color:var(--tx3)">Loading users...</div></div>
+      <!-- plans -->
       <div id="at-plans" style="display:none"><div style="color:var(--tx3)">Loading plans...</div></div>
+      <!-- servers -->
       <div id="at-servers" style="display:none"><div style="color:var(--tx3)">Loading servers...</div></div>
+      <!-- bots -->
       <div id="at-bots" style="display:none"><div style="color:var(--tx3)">Loading bots...</div></div>
     </div>
   </div>
 </div>
 
-<!-- MODALS (user, plan, config) - omitted for brevity but similar to original; include in full version -->
-<!-- We'll keep them simple here, but the original HTML had full modal code. For production, copy the modal sections from the provided DARKZONE HTML. -->
-<!-- This example includes only essential parts; full modals would be added. -->
+<!-- ==================== MODALS ==================== -->
+
+<!-- Edit User Modal -->
+<div class="mover" id="mEditUser">
+  <div class="modal">
+    <div class="mh">
+      <h3>Edit User</h3>
+      <button class="mx" onclick="closeM('mEditUser')">×</button>
+    </div>
+    <div class="fg">
+      <label>GitHub Username</label>
+      <input type="text" id="edit-username" readonly disabled>
+    </div>
+    <div class="row2">
+      <div class="fg">
+        <label><input type="checkbox" id="edit-is-approved"> Approved</label>
+      </div>
+      <div class="fg">
+        <label><input type="checkbox" id="edit-is-banned"> Banned</label>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fg">
+        <label>Max Bots</label>
+        <input type="number" id="edit-max-bots" min="1" value="2">
+      </div>
+      <div class="fg">
+        <label>Plan</label>
+        <input type="text" id="edit-plan" placeholder="free, pro, premium">
+      </div>
+    </div>
+    <div class="fg">
+      <label>Expiry Date</label>
+      <input type="date" id="edit-expiry">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-out sm" onclick="closeM('mEditUser')">Cancel</button>
+      <button class="btn btn-grn sm" onclick="saveUserEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Plan Modal (simple version) -->
+<div class="mover" id="mEditPlan">
+  <div class="modal">
+    <div class="mh">
+      <h3>Edit Plan</h3>
+      <button class="mx" onclick="closeM('mEditPlan')">×</button>
+    </div>
+    <div class="fg">
+      <label>Plan ID</label>
+      <input type="text" id="plan-id" readonly disabled>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Name</label><input id="plan-name"></div>
+      <div class="fg"><label>Price</label><input id="plan-price"></div>
+      <div class="fg"><label>Duration (days)</label><input type="number" id="plan-duration"></div>
+      <div class="fg"><label>Max Bots</label><input type="number" id="plan-maxbots"></div>
+    </div>
+    <div class="fg">
+      <label>Features (one per line)</label>
+      <textarea id="plan-features" rows="4"></textarea>
+    </div>
+    <div class="fg">
+      <label><input type="checkbox" id="plan-active" checked> Active</label>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-out sm" onclick="closeM('mEditPlan')">Cancel</button>
+      <button class="btn btn-grn sm" onclick="savePlanEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Config Modal -->
+<div class="mover" id="mConfig">
+  <div class="modal" style="max-width:680px">
+    <div class="mh">
+      <h3>⚙️ Config: <span id="mConfigApp" style="color:var(--pl);font-family:'Fira Code'"></span></h3>
+      <button class="mx" onclick="closeM('mConfig')">×</button>
+    </div>
+    <div id="mConfigBody"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-out sm" onclick="closeM('mConfig')">Cancel</button>
+      <button class="btn btn-pri sm" onclick="doSaveConfig()">💾 Save Config</button>
+    </div>
+  </div>
+</div>
 
 <script>
   // -------------------- CONFIG --------------------
-  const API_BASE = 'https://redxvpsbeckend-production.up.railway.app';  // 🔁 Your Railway backend
+  const API_BASE = '';  // 🔁 REPLACE WITH YOUR RAILWAY BACKEND URL (e.g., 'https://redx-backend.up.railway.app')
   const ADMIN_USER = 'redx';
   const ADMIN_PASS = 'redx';
-  const OWNER_NUMBER = '923009842133';  // Your WhatsApp number
+  const OWNER_NUMBER = '923009842133';
 
   // -------------------- STATE --------------------
   let CU = null;               // current user
-  let AP = null;               // admin password (stored after login)
+  let AP = null;               // admin password
   let currentEditingApp = null;
+  let currentEditingPlan = null;
 
   // -------------------- UTILS --------------------
   function notif(msg, type='info') {
@@ -471,6 +562,10 @@
         `❌ Fork not found for "${username}". <a href="https://github.com/AbdulRehman19721986/redxbot302/fork" target="_blank">Fork here</a>`, 'ae');
     }
 
+    if (data.isBanned) {
+      return alert2('loginAlert', '❌ Your account has been banned. Contact support.', 'ae');
+    }
+
     CU = { username: username.toLowerCase(), ...data };
     localStorage.setItem('redx_user', JSON.stringify(CU));
     document.getElementById('btnLogin').style.display = 'none';
@@ -488,10 +583,11 @@
     }
     document.getElementById('dhName').textContent = `👋 ${CU.username}`;
     const exp = CU.expiryDate ? new Date(CU.expiryDate).toLocaleDateString() : 'No expiry';
-    const plan = CU.subscriptionPlan || 'Free';
-    document.getElementById('dhSub').textContent = `Plan: ${plan} · Expires: ${exp} · Bots: ${CU.currentBots||0}/${CU.maxBots||1}`;
+    const plan = CU.subscriptionPlan || 'free';
+    document.getElementById('dhSub').textContent = `Plan: ${plan} · Expires: ${exp} · Bots: ${CU.currentBots}/${CU.maxBots}`;
     const badge = document.getElementById('dhBadge');
-    if (CU.isExpired) badge.innerHTML = '<span class="bdg br">Expired</span>';
+    if (CU.isBanned) badge.innerHTML = '<span class="bdg br">Banned</span>';
+    else if (CU.isExpired) badge.innerHTML = '<span class="bdg br">Expired</span>';
     else if (CU.isApproved) badge.innerHTML = '<span class="bdg bg">Active</span>';
     else badge.innerHTML = '<span class="bdg by">Pending</span>';
 
@@ -522,6 +618,9 @@
       githubUsername: CU.username,
       sessionId: session,
       appName: v('d-appName'),
+      OWNER_NUMBER: v('c-OWNER_NUM', OWNER_NUMBER),
+      BOT_NAME: v('c-BOT_NAME', 'REDX BOT'),
+      PREFIX: v('c-PREFIX', '.'),
       AUTO_STATUS_SEEN:  chk('c-STATUS_SEEN'),
       AUTO_STATUS_REACT: chk('c-STATUS_REACT'),
       ANTI_DELETE:       chk('c-ANTI_DELETE'),
@@ -531,11 +630,7 @@
       AUTO_STICKER:      chk('c-AUTO_STICKER'),
       WELCOME:           chk('c-WELCOME'),
       READ_MESSAGE:      chk('c-READ_MSG'),
-      AUTO_TYPING:       chk('c-AUTO_TYPING'),
-      BOT_NAME:    v('c-BOT_NAME',  'REDX BOT'),
-      OWNER_NAME:  v('c-OWNER_NAME','Abdul Rehman'),
-      OWNER_NUMBER:v('c-OWNER_NUM', OWNER_NUMBER),
-      PREFIX:      v('c-PREFIX',    '.')
+      AUTO_TYPING:       chk('c-AUTO_TYPING')
     };
 
     const data = await post('/deploy', payload);
@@ -544,11 +639,12 @@
     if (data.error) {
       alert2('dAlert', '❌ ' + data.error, 'ae');
     } else {
-      alert2('dAlert', `✅ Bot <b>${data.appName}</b> is deploying!`, 'as');
+      alert2('dAlert', `✅ ${data.message || 'Bot deployed!'}`, 'as');
       notif('🎉 Bot deployed!', 'success');
       const fresh = await post('/check-fork', { githubUsername: CU.username });
       CU = { ...CU, ...fresh };
       localStorage.setItem('redx_user', JSON.stringify(CU));
+      loadMyBots();
     }
   }
 
@@ -557,11 +653,11 @@
     if (!CU) return;
     const c = document.getElementById('botsContainer');
     const data = await post('/check-fork', { githubUsername: CU.username });
-    const bots = data.deployedBots || CU.deployedBots || [];
+    const bots = data.deployedBots || [];
     if (!bots.length) {
       c.innerHTML = `<div style="text-align:center;padding:50px;color:var(--tx3)">
         <div style="font-size:2.5rem;margin-bottom:12px">🤖</div>
-        <p>No bots deployed yet.</p>
+        <p>No bots deployed yet. (Limit: ${CU.maxBots} bots)</p>
         <button class="btn btn-pri sm" style="margin-top:14px" onclick="switchTab('deploy')">Deploy Your First Bot</button>
       </div>`;
       return;
@@ -570,15 +666,16 @@
       <div class="botcard">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
           <div>
-            <div class="appname">🤖 ${b.appName}</div>
-            <div style="color:var(--tx3);font-size:.8rem">Server ${b.serverId} · ${b.createdAt ? new Date(b.createdAt).toLocaleDateString() : ''}</div>
+            <div class="appname">🤖 ${b.app_name}</div>
+            <div style="color:var(--tx3);font-size:.8rem">Created: ${b.created_at ? new Date(b.created_at).toLocaleDateString() : ''}</div>
           </div>
-          <span class="bdg bg">Running</span>
+          <span class="bdg bg">${b.status || 'running'}</span>
         </div>
         <div class="botacts">
-          <button class="btn btn-out sm" onclick="openConfig('${b.appName}')">⚙️ Config</button>
-          <button class="btn btn-acc sm" onclick="restartBot('${b.appName}')">🔄 Restart</button>
-          <button class="btn btn-red sm" onclick="deleteMyBot('${b.appName}')">🗑️ Delete</button>
+          <button class="btn btn-out sm" onclick="openConfig('${b.app_name}')">⚙️ Config</button>
+          <button class="btn btn-acc sm" onclick="restartBot('${b.app_name}')">🔄 Restart</button>
+          <button class="btn btn-info sm" onclick="viewLogs('${b.app_name}')">📋 Logs</button>
+          <button class="btn btn-red sm" onclick="deleteMyBot('${b.app_name}')">🗑️ Delete</button>
         </div>
       </div>
     `).join('');
@@ -588,14 +685,14 @@
     if (!confirm(`Restart ${appName}?`)) return;
     notif('Restarting...', 'info');
     const d = await post('/restart-app', { appName });
-    notif(d.message, d.success ? 'success' : 'error');
+    notif(d.message || (d.success ? 'Restarted' : 'Error'), d.success ? 'success' : 'error');
   }
 
   async function deleteMyBot(appName) {
-    if (!confirm(`Delete bot "${appName}"?`)) return;
+    if (!confirm(`Delete bot "${appName}"? This cannot be undone.`)) return;
     notif('Deleting...', 'info');
     const d = await post('/delete-app', { appName, githubUsername: CU.username });
-    notif(d.message, d.success ? 'success' : 'error');
+    notif(d.message || (d.success ? 'Deleted' : 'Error'), d.success ? 'success' : 'error');
     if (d.success) {
       const fresh = await post('/check-fork', { githubUsername: CU.username });
       CU = { ...CU, ...fresh };
@@ -604,13 +701,45 @@
     }
   }
 
-  // -------------------- CONFIG MODAL (simplified) --------------------
+  async function viewLogs(appName) {
+    const data = await post('/bot-logs', { appName });
+    if (data.success) {
+      alert(data.logs); // you can replace with a modal if desired
+    } else {
+      notif('Failed to fetch logs: ' + data.error, 'error');
+    }
+  }
+
+  // -------------------- CONFIG MODAL --------------------
   async function openConfig(appName) {
     currentEditingApp = appName;
-    const cfg = await post('/get-config', { appName });
-    if (!cfg.success) return notif('Failed to load config', 'error');
-    // In a full version, show a modal with inputs; here we just alert
-    alert('Edit config via admin panel (full modal would appear)');
+    document.getElementById('mConfigApp').textContent = appName;
+    document.getElementById('mConfigBody').innerHTML = '<div style="color:var(--tx3);padding:20px 0">Loading config...</div>';
+    openM('mConfig');
+
+    const d = await post('/get-config', { appName });
+    if (!d.success) {
+      document.getElementById('mConfigBody').innerHTML = `<div class="alert ae">Failed to load: ${d.error}</div>`;
+      return;
+    }
+    const cfg = d.config;
+    let html = '';
+    for (let [key, val] of Object.entries(cfg)) {
+      html += `<div class="fg"><label>${key}</label><input id="cfg-${key}" value="${(val||'').replace(/"/g,'&quot;')}"/></div>`;
+    }
+    document.getElementById('mConfigBody').innerHTML = html;
+  }
+
+  async function doSaveConfig() {
+    if (!currentEditingApp) return;
+    const config = {};
+    document.querySelectorAll('#mConfigBody input').forEach(inp => {
+      const key = inp.id.replace('cfg-', '');
+      config[key] = inp.value;
+    });
+    const d = await post('/update-config', { appName: currentEditingApp, config });
+    notif(d.message || (d.success ? 'Saved!' : 'Error'), d.success ? 'success' : 'error');
+    if (d.success) closeM('mConfig');
   }
 
   // -------------------- SUBSCRIPTION TAB --------------------
@@ -620,7 +749,7 @@
     const { plans } = await r.json();
     el.innerHTML = `
       <div class="alert ai" style="margin-bottom:20px">
-        Current plan: <b>${CU.subscriptionPlan||'Free'}</b> ·
+        Current plan: <b>${CU.subscriptionPlan || 'free'}</b> ·
         Expires: <b>${CU.expiryDate ? new Date(CU.expiryDate).toLocaleDateString() : 'N/A'}</b>
       </div>
       <div class="cgrid">
@@ -628,7 +757,7 @@
           <div class="plancard ${i===1?'pop':''}">
             <div style="font-size:.78rem;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:1px">${p.name}</div>
             <div class="pp">${p.price.replace('/month','')}<span>${p.price.includes('month')?'/mo':''}</span></div>
-            <div style="color:var(--tx3);font-size:.82rem;margin-bottom:12px">${p.duration} · ${p.maxBots} bot${p.maxBots>1?'s':''}</div>
+            <div style="color:var(--tx3);font-size:.82rem;margin-bottom:12px">${p.duration_days} days · ${p.max_bots} bot${p.max_bots>1?'s':''}</div>
             <ul class="pf">${(p.features||[]).map(f=>`<li>${f}</li>`).join('')}</ul>
             <button class="btn ${i===1?'btn-pri':'btn-out'}" style="width:100%;font-size:.88rem" onclick="buyPlan('${p.name}','${p.price}')">
               ${CU.subscriptionPlan===p.name ? '✓ Current Plan' : '💬 Buy via WhatsApp'}
@@ -654,7 +783,7 @@
         <div class="plancard ${i===1?'pop':''}">
           <div style="font-size:.78rem;color:var(--tx3);font-weight:600;text-transform:uppercase;letter-spacing:1px">${p.name}</div>
           <div class="pp">${p.price.replace('/month','')}<span>${p.price.includes('month')?'/mo':''}</span></div>
-          <div style="color:var(--tx3);font-size:.82rem;margin-bottom:12px">${p.duration} · ${p.maxBots} bot${p.maxBots>1?'s':''}</div>
+          <div style="color:var(--tx3);font-size:.82rem;margin-bottom:12px">${p.duration_days} days · ${p.max_bots} bot${p.max_bots>1?'s':''}</div>
           <ul class="pf">${(p.features||[]).map(f=>`<li>${f}</li>`).join('')}</ul>
           <button class="btn ${i===1?'btn-pri':'btn-out'}" style="width:100%;font-size:.88rem"
             onclick="${CU ? `buyPlan('${p.name}','${p.price}')` : "go('login')"}">
@@ -667,11 +796,15 @@
   // -------------------- ADMIN --------------------
   async function doAdminLogin() {
     const pwd = v('adminPwd');
-    if (pwd !== ADMIN_PASS) return alert2('aLoginAlert', '❌ Wrong password', 'ae');
-    AP = pwd;
-    document.getElementById('adminLogin').style.display = 'none';
-    document.getElementById('adminDash').style.display = 'flex';
-    aLoadUsers();
+    const data = await post('/admin/login', { password: pwd });
+    if (data.success) {
+      AP = pwd;
+      document.getElementById('adminLogin').style.display = 'none';
+      document.getElementById('adminDash').style.display = 'flex';
+      aLoadUsers();
+    } else {
+      alert2('aLoginAlert', '❌ Invalid password', 'ae');
+    }
   }
 
   function aTab(name) {
@@ -685,90 +818,198 @@
     if (name==='bots')    aLoadBots();
   }
 
+  // ---------- Admin Users ----------
   async function aLoadUsers() {
-    const d = await post('/admin/users', { password: AP });
+    const data = await post('/admin/users', { password: AP });
     const el = document.getElementById('at-users');
-    if (!d.users?.length) { el.innerHTML = '<div style="color:var(--tx3)">No users yet.</div>'; return; }
+    if (!data.users?.length) {
+      el.innerHTML = '<div style="color:var(--tx3)">No users yet.</div>';
+      return;
+    }
     el.innerHTML = `<div class="tw2"><table>
-      <thead><tr><th>GitHub</th><th>Status</th><th>Plan</th><th>Max Bots</th><th>Bots</th><th>Expiry</th><th>Actions</th></tr></thead>
+      <thead>
+        <tr>
+          <th>GitHub</th>
+          <th>Status</th>
+          <th>Plan</th>
+          <th>Max Bots</th>
+          <th>Active</th>
+          <th>Deployments</th>
+          <th>Expiry</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
       <tbody>
-        ${d.users.map(u => `<tr>
+        ${data.users.map(u => `<tr>
           <td><a href="https://github.com/${u.github_username}" target="_blank" style="color:var(--pl)">${u.github_username}</a></td>
-          <td>${u.is_approved ? '<span class="bdg bg">Approved</span>' : '<span class="bdg by">Pending</span>'}</td>
-          <td>${u.subscription_plan||'-'}</td>
-          <td>${u.max_bots||1}</td>
-          <td>0</td>
-          <td style="font-size:.8rem">${u.expiry_date ? new Date(u.expiry_date).toLocaleDateString() : '—'}</td>
-          <td style="display:flex;gap:5px;flex-wrap:wrap">
-            <button class="btn btn-out sm" onclick='alert("Edit user modal")'>Edit</button>
-            <button class="btn btn-red sm" onclick="aDeleteUser('${u.github_username}')">Del</button>
+          <td>
+            ${u.is_banned ? '<span class="bdg br">Banned</span>' : u.is_approved ? '<span class="bdg bg">Approved</span>' : '<span class="bdg by">Pending</span>'}
+          </td>
+          <td>${u.subscription_plan || 'free'}</td>
+          <td>${u.max_bots}</td>
+          <td>${u.active_bots || 0}</td>
+          <td>${u.deployment_count || 0}</td>
+          <td>${u.expiry_date ? new Date(u.expiry_date).toLocaleDateString() : '—'}</td>
+          <td>
+            <button class="btn btn-out sm" onclick="openUserEditModal('${u.github_username}', ${u.is_approved}, ${u.is_banned}, ${u.max_bots}, '${u.subscription_plan || 'free'}', '${u.expiry_date || ''}')">Edit</button>
+            <button class="btn btn-red sm" onclick="aDeleteUser('${u.github_username}')">Delete</button>
           </td>
         </tr>`).join('')}
       </tbody>
     </table></div>`;
   }
 
-  async function aDeleteUser(gh) {
-    if (!confirm(`Delete user ${gh}?`)) return;
-    const d = await post('/admin/delete-user', { password: AP, githubUsername: gh });
-    notif(d.success ? 'Deleted' : d.message, d.success ? 'success' : 'error');
-    if (d.success) aLoadUsers();
+  function openUserEditModal(username, isApproved, isBanned, maxBots, plan, expiry) {
+    document.getElementById('edit-username').value = username;
+    document.getElementById('edit-is-approved').checked = isApproved;
+    document.getElementById('edit-is-banned').checked = isBanned;
+    document.getElementById('edit-max-bots').value = maxBots;
+    document.getElementById('edit-plan').value = plan;
+    document.getElementById('edit-expiry').value = expiry ? expiry.split('T')[0] : '';
+    openM('mEditUser');
   }
 
+  async function saveUserEdit() {
+    const data = {
+      password: AP,
+      githubUsername: document.getElementById('edit-username').value,
+      isApproved: document.getElementById('edit-is-approved').checked,
+      isBanned: document.getElementById('edit-is-banned').checked,
+      maxBots: parseInt(document.getElementById('edit-max-bots').value),
+      subscriptionPlan: document.getElementById('edit-plan').value,
+      expiryDate: document.getElementById('edit-expiry').value || null
+    };
+    const res = await post('/admin/update-user', data);
+    if (res.success) {
+      notif('User updated', 'success');
+      closeM('mEditUser');
+      aLoadUsers();
+    } else {
+      notif('Error: ' + res.error, 'error');
+    }
+  }
+
+  async function aDeleteUser(username) {
+    if (!confirm(`Delete user ${username} and all their bots?`)) return;
+    const res = await post('/admin/delete-user', { password: AP, githubUsername: username });
+    if (res.success) {
+      notif('User deleted', 'success');
+      aLoadUsers();
+    } else {
+      notif('Error: ' + res.error, 'error');
+    }
+  }
+
+  // ---------- Admin Plans ----------
   async function aLoadPlans() {
-    const d = await post('/admin/plans', { password: AP });
+    const data = await post('/admin/plans', { password: AP });
     const el = document.getElementById('at-plans');
-    el.innerHTML = d.plans?.length ? `<div class="cgrid">${d.plans.map(p => `
+    if (!data.plans?.length) {
+      el.innerHTML = '<div style="color:var(--tx3)">No plans yet.</div>';
+      return;
+    }
+    el.innerHTML = `<div class="cgrid">${data.plans.map(p => `
       <div class="card">
-        <div><b>${p.name}</b> <span class="bdg bg">${p.price}</span></div>
-        <div style="margin-top:6px">${p.duration} · ${p.max_bots} bots</div>
-        <div style="display:flex;gap:7px;margin-top:14px">
-          <button class="btn btn-out sm" onclick='alert("Edit")'>Edit</button>
-          <button class="btn btn-red sm" onclick="aDeletePlan('${p.id}')">Delete</button>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <b>${p.name}</b>
+          <span class="bdg ${p.is_active?'bg':'br'}">${p.is_active?'Active':'Inactive'}</span>
         </div>
-      </div>`).join('')}</div>` : '<div style="color:var(--tx3)">No plans</div>';
+        <div style="color:var(--pl);font-size:1.3rem;font-weight:700">${p.price}</div>
+        <div>${p.duration_days} days · ${p.max_bots} bots</div>
+        <div style="display:flex;gap:7px;margin-top:14px">
+          <button class="btn btn-out sm" onclick='openPlanEditModal(${JSON.stringify(p)})'>Edit</button>
+          <button class="btn btn-red sm" onclick="aDeletePlan(${p.id})">Delete</button>
+        </div>
+      </div>`).join('')}</div>`;
+  }
+
+  function openPlanEditModal(plan) {
+    currentEditingPlan = plan.id;
+    document.getElementById('plan-id').value = plan.id;
+    document.getElementById('plan-name').value = plan.name;
+    document.getElementById('plan-price').value = plan.price;
+    document.getElementById('plan-duration').value = plan.duration_days;
+    document.getElementById('plan-maxbots').value = plan.max_bots;
+    document.getElementById('plan-features').value = (plan.features || []).join('\n');
+    document.getElementById('plan-active').checked = plan.is_active;
+    openM('mEditPlan');
+  }
+
+  async function savePlanEdit() {
+    const data = {
+      password: AP,
+      id: currentEditingPlan,
+      name: v('plan-name'),
+      price: v('plan-price'),
+      duration_days: parseInt(v('plan-duration')),
+      max_bots: parseInt(v('plan-maxbots')),
+      features: v('plan-features').split('\n').map(s=>s.trim()).filter(Boolean),
+      is_active: document.getElementById('plan-active').checked
+    };
+    const res = await post('/admin/update-plan', data);
+    if (res.success) {
+      notif('Plan updated', 'success');
+      closeM('mEditPlan');
+      aLoadPlans();
+    } else {
+      notif('Error: ' + res.error, 'error');
+    }
   }
 
   async function aDeletePlan(id) {
-    if (!confirm('Delete plan?')) return;
-    const d = await post('/admin/delete-plan', { password: AP, id });
-    notif(d.success ? 'Deleted' : 'Error', d.success ? 'success' : 'error');
-    if (d.success) aLoadPlans();
+    if (!confirm('Delete this plan?')) return;
+    const res = await post('/admin/delete-plan', { password: AP, id });
+    if (res.success) {
+      notif('Plan deleted', 'success');
+      aLoadPlans();
+    } else {
+      notif('Error: ' + res.error, 'error');
+    }
   }
 
+  // ---------- Admin Servers ----------
   async function aLoadServers() {
-    const d = await post('/admin/servers', { password: AP });
+    const data = await post('/admin/servers', { password: AP });
     const el = document.getElementById('at-servers');
-    el.innerHTML = `<div class="cgrid">${(d.servers||[]).map(s => `
+    el.innerHTML = `<div class="cgrid">${(data.servers||[]).map(s => `
       <div class="card">
         <b>${s.name}</b>
         <div style="font-size:2rem;font-weight:800;color:var(--pl);margin:10px 0">${s.bot_count||0}</div>
         <div>bots deployed</div>
-        ${s.error ? `<div style="color:var(--red);font-size:.78rem">${s.error}</div>` : ''}
+        <div style="color:var(--tx3);font-size:.8rem">Status: ${s.status}</div>
       </div>`).join('')}</div>`;
   }
 
+  // ---------- Admin All Bots ----------
   async function aLoadBots() {
-    const d = await post('/get-all-apps', { password: AP });
+    const data = await post('/get-all-apps', { password: AP });
     const el = document.getElementById('at-bots');
-    if (!d.apps?.length) { el.innerHTML = '<div style="color:var(--tx3)">No bots deployed.</div>'; return; }
+    if (!data.apps?.length) {
+      el.innerHTML = '<div style="color:var(--tx3)">No bots deployed.</div>';
+      return;
+    }
     el.innerHTML = `<div class="tw2"><table>
-      <thead><tr><th>App</th><th>User</th><th>Server</th><th>Created</th><th>Action</th></tr></thead>
-      <tbody>${d.apps.map(a => `<tr>
+      <thead><tr><th>App</th><th>User</th><th>Server</th><th>Created</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody>${data.apps.map(a => `<tr>
         <td style="font-family:'Fira Code'">${a.app_name}</td>
         <td>${a.github_username}</td>
         <td>${a.server_name}</td>
         <td>${new Date(a.created_at).toLocaleDateString()}</td>
+        <td><span class="bdg bg">${a.status}</span></td>
         <td><button class="btn btn-red sm" onclick="aDeleteBot('${a.app_name}')">Delete</button></td>
       </tr>`).join('')}
       </tbody></table></div>`;
   }
 
   async function aDeleteBot(name) {
-    if (!confirm(`Delete ${name}?`)) return;
-    const d = await post('/delete-multiple-apps', { password: AP, apps: [{ name }] });
-    notif(d.results?.success?.length ? 'Deleted' : 'Failed', d.results?.success?.length ? 'success' : 'error');
-    aLoadBots();
+    if (!confirm(`Delete bot ${name}?`)) return;
+    const res = await post('/delete-multiple-apps', { password: AP, apps: [{ name }] });
+    if (res.results?.success?.length) {
+      notif('Bot deleted', 'success');
+      aLoadBots();
+    } else {
+      notif('Failed to delete bot', 'error');
+    }
   }
 </script>
 </body>
