@@ -188,8 +188,8 @@
 <div id="pg-home" class="page active">
   <div class="hero">
     <div class="badge-hero">⚡ WhatsApp Bot Deployer by Abdul Rehman & Muzamil</div>
-    <h1>Deploy <span>REDX BOT</span><br/>Instantly</h1>
-    <p>Fork the repo, enter your Session ID, and your bot goes live in minutes. Join our WhatsApp group for support.</p>
+    <h1>Deploy <span>REDX BOT</span><br/>Instantly to Heroku</h1>
+    <p>Fork the repo, enter your Session ID, and your bot goes live on Heroku in minutes. Join our WhatsApp group for support.</p>
     <div class="hbtns">
       <button class="btn btn-pri" onclick="go('login')">🚀 Get Started Free</button>
       <button class="btn btn-out" onclick="go('plans')">👑 View Plans</button>
@@ -216,7 +216,7 @@
       </div>
       <div style="display:flex;gap:18px;align-items:flex-start">
         <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#6d28d9);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">3</div>
-        <div><div style="font-weight:600;margin-bottom:3px">Paste Session ID & Deploy</div><div style="color:var(--tx2);font-size:.88rem">Enter your WhatsApp Session ID and hit deploy. Bot goes live in ~2 minutes.</div></div>
+        <div><div style="font-weight:600;margin-bottom:3px">Paste Session ID & Deploy</div><div style="color:var(--tx2);font-size:.88rem">Enter your WhatsApp Session ID and hit deploy. Bot goes live on Heroku in minutes.</div></div>
       </div>
     </div>
     <div style="text-align:center;background:var(--card);border-radius:var(--r);padding:28px;max-width:720px;margin:0 auto">
@@ -271,7 +271,7 @@
     <div id="tab-deploy">
       <div id="dAlert"></div>
       <div class="card">
-        <div style="font-size:1.05rem;font-weight:700;margin-bottom:4px">Deploy New Bot</div>
+        <div style="font-size:1.05rem;font-weight:700;margin-bottom:4px">Deploy New Bot to Heroku</div>
         <div style="color:var(--tx2);font-size:.85rem;margin-bottom:22px">Fill in the required fields and hit deploy</div>
         <div class="row2">
           <div class="fg">
@@ -307,7 +307,7 @@
         </details>
 
         <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn btn-pri" onclick="deployBot()" id="deployBtn">🚀 Deploy Bot</button>
+          <button class="btn btn-pri" onclick="deployBot()" id="deployBtn">🚀 Deploy to Heroku</button>
           <button class="btn btn-ylw" onclick="go('plans')" style="font-size:.85rem">👑 Upgrade Plan</button>
         </div>
       </div>
@@ -360,7 +360,6 @@
     <div class="aside">
       <div class="aside-item active" onclick="aTab('users')">👥 Users</div>
       <div class="aside-item" onclick="aTab('plans')">💰 Plans</div>
-      <div class="aside-item" onclick="aTab('servers')">🖥 Servers</div>
       <div class="aside-item" onclick="aTab('bots')">🤖 All Bots</div>
       <div class="aside-item" style="color:var(--red)" onclick="logout()">🚪 Logout</div>
     </div>
@@ -369,10 +368,12 @@
       <div id="at-users"><div style="color:var(--tx3)">Loading users...</div></div>
       <!-- plans -->
       <div id="at-plans" style="display:none"><div style="color:var(--tx3)">Loading plans...</div></div>
-      <!-- servers -->
-      <div id="at-servers" style="display:none"><div style="color:var(--tx3)">Loading servers...</div></div>
       <!-- bots -->
       <div id="at-bots" style="display:none"><div style="color:var(--tx3)">Loading bots...</div></div>
+      <!-- change password button -->
+      <div style="margin-top:20px; text-align:center">
+        <button class="btn btn-out" onclick="openChangePasswordModal()">🔑 Change Admin Password</button>
+      </div>
     </div>
   </div>
 </div>
@@ -419,7 +420,7 @@
   </div>
 </div>
 
-<!-- Edit Plan Modal (simple version) -->
+<!-- Edit Plan Modal -->
 <div class="mover" id="mEditPlan">
   <div class="modal">
     <div class="mh">
@@ -450,7 +451,33 @@
   </div>
 </div>
 
-<!-- Config Modal -->
+<!-- Change Password Modal -->
+<div class="mover" id="mChangePassword">
+  <div class="modal">
+    <div class="mh">
+      <h3>Change Admin Password</h3>
+      <button class="mx" onclick="closeM('mChangePassword')">×</button>
+    </div>
+    <div class="fg">
+      <label>Current Password</label>
+      <input type="password" id="cp-current" placeholder="Enter current password">
+    </div>
+    <div class="fg">
+      <label>New Password</label>
+      <input type="password" id="cp-new" placeholder="Enter new password">
+    </div>
+    <div class="fg">
+      <label>Confirm New Password</label>
+      <input type="password" id="cp-confirm" placeholder="Confirm new password">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button class="btn btn-out sm" onclick="closeM('mChangePassword')">Cancel</button>
+      <button class="btn btn-pri sm" onclick="changeAdminPassword()">Update Password</button>
+    </div>
+  </div>
+</div>
+
+<!-- Config Modal (if needed) -->
 <div class="mover" id="mConfig">
   <div class="modal" style="max-width:680px">
     <div class="mh">
@@ -467,15 +494,12 @@
 
 <script>
   // -------------------- CONFIG --------------------
-  // 🔁 SET YOUR RAILWAY BACKEND URL HERE
-  const API_BASE = 'https://redxvpsbeckend-production.up.railway.app';  // <-- FIXED
-  const ADMIN_USER = 'redx';
-  const ADMIN_PASS = 'redx';
+  const API_BASE = 'https://redxvpsbeckend-production-8012.up.railway.app'; // 🔁 Your Railway backend URL
   const OWNER_NUMBER = '923009842133';
 
   // -------------------- STATE --------------------
   let CU = null;               // current user
-  let AP = null;               // admin password
+  let AP = null;               // admin password (stored after login)
   let currentEditingApp = null;
   let currentEditingPlan = null;
 
@@ -611,7 +635,7 @@
     const session = v('d-session');
     if (!session) return alert2('dAlert', '⚠️ Session ID required', 'aw');
     const btn = document.getElementById('deployBtn');
-    btn.innerHTML = '<span class="ld"></span> Deploying...';
+    btn.innerHTML = '<span class="ld"></span> Deploying to Heroku...';
     btn.disabled = true;
     alert2('dAlert', '');
 
@@ -635,13 +659,13 @@
     };
 
     const data = await post('/deploy', payload);
-    btn.innerHTML = '🚀 Deploy Bot';
+    btn.innerHTML = '🚀 Deploy to Heroku';
     btn.disabled = false;
     if (data.error) {
-      alert2('dAlert', '❌ ' + data.error, 'ae');
+      alert2('dAlert', '❌ ' + data.error + (data.details ? '<br><small>'+data.details+'</small>' : ''), 'ae');
     } else {
-      alert2('dAlert', `✅ ${data.message || 'Bot deployed!'}`, 'as');
-      notif('🎉 Bot deployed!', 'success');
+      alert2('dAlert', `✅ ${data.message || 'Bot deployed to Heroku!'}`, 'as');
+      notif('🎉 Bot deployed to Heroku!', 'success');
       const fresh = await post('/check-fork', { githubUsername: CU.username });
       CU = { ...CU, ...fresh };
       localStorage.setItem('redx_user', JSON.stringify(CU));
@@ -809,13 +833,12 @@
   }
 
   function aTab(name) {
-    ['users','plans','servers','bots'].forEach(t => {
-      document.querySelector(`.aside-item:nth-child(${['users','plans','servers','bots'].indexOf(t)+1})`).classList.toggle('active', t===name);
+    ['users','plans','bots'].forEach(t => {
+      document.querySelector(`.aside-item:nth-child(${['users','plans','bots'].indexOf(t)+1})`).classList.toggle('active', t===name);
       document.getElementById('at-'+t).style.display = t===name ? 'block':'none';
     });
     if (name==='users')   aLoadUsers();
     if (name==='plans')   aLoadPlans();
-    if (name==='servers') aLoadServers();
     if (name==='bots')    aLoadBots();
   }
 
@@ -968,19 +991,6 @@
     }
   }
 
-  // ---------- Admin Servers ----------
-  async function aLoadServers() {
-    const data = await post('/admin/servers', { password: AP });
-    const el = document.getElementById('at-servers');
-    el.innerHTML = `<div class="cgrid">${(data.servers||[]).map(s => `
-      <div class="card">
-        <b>${s.name}</b>
-        <div style="font-size:2rem;font-weight:800;color:var(--pl);margin:10px 0">${s.bot_count||0}</div>
-        <div>bots deployed</div>
-        <div style="color:var(--tx3);font-size:.8rem">Status: ${s.status}</div>
-      </div>`).join('')}</div>`;
-  }
-
   // ---------- Admin All Bots ----------
   async function aLoadBots() {
     const data = await post('/get-all-apps', { password: AP });
@@ -990,11 +1000,11 @@
       return;
     }
     el.innerHTML = `<div class="tw2"><table>
-      <thead><tr><th>App</th><th>User</th><th>Server</th><th>Created</th><th>Status</th><th>Action</th></tr></thead>
+      <thead><tr><th>App</th><th>User</th><th>Heroku App</th><th>Created</th><th>Status</th><th>Action</th></tr></thead>
       <tbody>${data.apps.map(a => `<tr>
         <td style="font-family:'Fira Code'">${a.app_name}</td>
         <td>${a.github_username}</td>
-        <td>${a.server_name}</td>
+        <td>${a.heroku_app_name || ''}</td>
         <td>${new Date(a.created_at).toLocaleDateString()}</td>
         <td><span class="bdg bg">${a.status}</span></td>
         <td><button class="btn btn-red sm" onclick="aDeleteBot('${a.app_name}')">Delete</button></td>
@@ -1010,6 +1020,43 @@
       aLoadBots();
     } else {
       notif('Failed to delete bot', 'error');
+    }
+  }
+
+  // ---------- Change Admin Password ----------
+  function openChangePasswordModal() {
+    document.getElementById('cp-current').value = '';
+    document.getElementById('cp-new').value = '';
+    document.getElementById('cp-confirm').value = '';
+    openM('mChangePassword');
+  }
+
+  async function changeAdminPassword() {
+    const current = document.getElementById('cp-current').value;
+    const newPwd = document.getElementById('cp-new').value;
+    const confirm = document.getElementById('cp-confirm').value;
+
+    if (!current || !newPwd || !confirm) {
+      notif('Please fill all fields', 'error');
+      return;
+    }
+    if (newPwd !== confirm) {
+      notif('New passwords do not match', 'error');
+      return;
+    }
+
+    const data = await post('/admin/update-password', {
+      currentPassword: current,
+      newPassword: newPwd
+    });
+
+    if (data.success) {
+      notif('Password updated successfully', 'success');
+      closeM('mChangePassword');
+      // Update stored admin password if desired
+      AP = newPwd;
+    } else {
+      notif('Error: ' + (data.error || 'Failed to update password'), 'error');
     }
   }
 </script>
